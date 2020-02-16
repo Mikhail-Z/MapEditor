@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MapEditor</title>
+    <link rel="stylesheet" href="../static/ol.css">
+    <script src="../static/ol.js"></script>
+    <script src="../static/jquery.js"></script>
+    {{ form.media }}
+</head>
+<body>
+    <h1>Правка геообъекта</h1>
+    <form method="POST" action="">
+        <table>
+            <tr>
+                <td></td>
+                <td align="right">
+                    <input type="submit" name="delete" value="Удалить файл фигур"/>
+                </td>
+            </tr>
+            {{ form.as_table }}
+            <tr>
+                <td></td>
+                <td align="right">
+                    <table>
+                        {% for attr in attributes %}
+                            <tr>
+                                <td>{{ attr.0 }}</td>
+                                <td>{{ attr.1 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td></td>
+                <td align="center">
+                    <input type="submit" value="Сохранить" />
+                    &nbsp;
+                    <button type="button" onclick='window.location="/edit/{{shapefile.id}}";'>
+                        Отменить
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </form>
+</body>
+</html>
