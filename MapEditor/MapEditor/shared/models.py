@@ -2,11 +2,14 @@
 from __future__ import unicode_literals
 
 from django.contrib.gis.db import models
+from django.contrib.auth import get_user_model
+
 
 class ShapeFile(models.Model):
     file_name = models.CharField(max_length=255)
     src_wkt = models.CharField(max_length=1024)
     geom_type = models.CharField(max_length=50)
+    user = models.ForeignKey(get_user_model(), null=True)
 
     def __str__(self):
         return self.file_name
@@ -39,5 +42,6 @@ class AttributeValue(models.Model):
     feature = models.ForeignKey(Feature)
     attribute = models.ForeignKey(Attribute)
     value = models.CharField(max_length=255, blank=True, null=True)
+
     def __str__(self):
         return self.value

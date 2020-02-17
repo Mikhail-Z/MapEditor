@@ -97,23 +97,23 @@ def set_ogr_feature_attribute(attr, value, feature):
         return
 
     if attr.type == ogr.OFTInteger:
-        feature.SetField(attr_name, int(value))
+        feature.SetField(attr_name.encode("utf-8"), int(value))
     elif attr.type == ogr.OFTIntegerList:
         integers = eval(value)
-        feature.SetFieldIntegerList(attr_name, integers)
+        feature.SetFieldIntegerList(attr_name.encode("utf-8"), integers)
     elif attr.type == ogr.OFTReal:
-        feature.SetField(attr_name, float(value))
+        feature.SetField(attr_name.encode("utf-8"), float(value))
     elif attr.type == ogr.OFTRealList:
         floats = []
         for s in eval(value):
             floats.append(eval(s))
-        feature.SetFieldDoubleList(attr_name, floats)
+        feature.SetFieldDoubleList(attr_name.encode("utf-8"), floats)
     elif attr.type == ogr.OFTString:
         feature.SetField(attr_name, value)
     elif attr.type == ogr.OFTStringList:
         strings = []
         for s in eval(value):
-            strings.append(s.encode(encoding))
+            strings.append(s.encode("utf-8"))
         feature.SetFieldStringList(attr_name, strings)
     elif attr.type == ogr.OFTDate:
         parts = value.split(",")

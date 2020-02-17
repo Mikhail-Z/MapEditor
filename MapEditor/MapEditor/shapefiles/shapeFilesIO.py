@@ -15,7 +15,7 @@ from ..shared.models import *
 from ..shared.utils import *
 
 
-def import_data(shapefile):
+def import_data(shapefile, user_id):
 
     # Extract the uploaded shapefile.
 
@@ -83,7 +83,8 @@ def import_data(shapefile):
     geom_name = ogr.GeometryTypeToName(geom_type)
     shapefile = ShapeFile(file_name=shapefile_name,
                           src_wkt=src_spatial_ref.ExportToWkt(),
-                          geom_type=geom_name)
+                          geom_type=geom_name,
+                          user_id=user_id)
     shapefile.save()
 
     # Define the shapefile's attributes.

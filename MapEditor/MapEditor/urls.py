@@ -21,6 +21,7 @@ urlpatterns = [
     url(r'^$', list_shapefiles),
     url(r'^import$', import_shapefile),
     url(r'^admin/', include(admin.site.urls)),
+    url(r'^authentication/', include("MapEditor.authentication.urls")),
     url(r'^export/(?P<shapefile_id>\d+)', export_shapefile),
     url(r'^tms/', include("MapEditor.tms.urls")),
     url(r'^edit/(?P<shapefile_id>\d+$)', edit_shapefile),

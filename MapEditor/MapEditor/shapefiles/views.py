@@ -11,12 +11,16 @@ from django.contrib.gis.geos import Point
 from ..shared.utils import *
 import shapeFilesIO
 from ..shared.models import *
+from django.contrib.auth.decorators import login_required
 
+
+@login_required
 def list_shapefiles(request):
-    shapefiles = ShapeFile.objects.all().order_by("file_name")
+    shapefiles = ShapeFile.objects.all().filter(user_id=request.user.id).order_by("file_name")
     return render(request, "list_shapefiles.html", {"shapefiles": shapefiles})
 
 
+@login_required
 def import_shapefile(request):
     if request.method == "GET":
         form = ImportShapefileForm()
@@ -26,12 +30,13 @@ def import_shapefile(request):
         form = ImportShapefileForm(request.POST, request.FILES)
         if form.is_valid():
             shapefile = request.FILES['import_file']
-            errMsg = shapeFilesIO.import_data(shapefile)
+            errMsg = shapeFilesIO.import_data(shapefile, request.user.id)
             if errMsg is None:
                 return HttpResponseRedirect("/")
         return render(request, "./import_shapefile.html", {"form": form, "errMsg": errMsg})
 
 
+@login_required
 def export_shapefile(request, shapefile_id):
     try:
         shapefile = ShapeFile.objects.get(id=shapefile_id)
@@ -41,6 +46,7 @@ def export_shapefile(request, shapefile_id):
     return shapeFilesIO.export_data(shapefile)
 
 
+@login_required
 def edit_shapefile(request, shapefile_id):
     try:
         shapefile = ShapeFile.objects.get(id=shapefile_id)
@@ -58,6 +64,7 @@ def edit_shapefile(request, shapefile_id):
     })
 
 
+@login_required
 def find_feature(request):
     try:
         shapefile_id = int(request.GET["shapefile_id"])
@@ -93,6 +100,7 @@ def find_feature(request):
     return HttpResponse("")
 
 
+@login_required
 def edit_feature(request, shapefile_id, feature_id=None):
     if request.method == "POST" and "delete" in request.POST:
         return HttpResponseRedirect("/delete_feature/" + shapefile_id + "/" + feature_id)
@@ -145,6 +153,7 @@ def edit_feature(request, shapefile_id, feature_id=None):
                   })
 
 
+@login_required
 def delete_feature(request, shapefile_id, feature_id):
     try:
         feature = Feature.objects.get(id=feature_id)
@@ -160,6 +169,7 @@ def delete_feature(request, shapefile_id, feature_id):
     return render(request, "delete_feature.html")
 
 
+@login_required
 def delete_shapefile(request, shapefile_id):
     try:
         shapefile = ShapeFile.objects.get(id=shapefile_id)
