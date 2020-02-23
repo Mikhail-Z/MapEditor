@@ -38,7 +38,6 @@ def service(request, version):
     try:
         if version != "1.0":
             return Http404
-
         baseUrl = request.build_absolute_uri()
         xml = []
         xml.append('<?xml version="1.0" encoding="utf-8" ?>')
