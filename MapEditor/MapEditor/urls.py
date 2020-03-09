@@ -29,5 +29,7 @@ urlpatterns = [
     url(r'^edit_feature/(?P<shapefile_id>\d+)/(?P<feature_id>\d+)$', edit_feature),
     url(r'^edit_feature/(?P<shapefile_id>\d+)$', edit_feature),
     url(r'^delete_feature/(?P<shapefile_id>\d+)/(?P<feature_id>\d+)$', delete_feature),
-    url(r'^delete/(?P<shapefile_id>\d+)$', delete_shapefile)
+    url(r'^delete/(?P<shapefile_id>\d+)$', delete_shapefile),
+
+    url(r'api', include('api.urls'))
 ]

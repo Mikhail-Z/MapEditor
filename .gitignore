@@ -94,3 +94,4 @@ db.sqlite3
 *.shx
 *.zip
 migrations/
+.vscode/

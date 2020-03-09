@@ -45,7 +45,8 @@ INSTALLED_APPS = [
     'MapEditor.shared',
     'MapEditor.shapefiles',
     'MapEditor.tms',
-    'MapEditor.authentication'
+    'MapEditor.authentication',
+    'MapEditor.api'
 ]
 
 MIDDLEWARE = [
