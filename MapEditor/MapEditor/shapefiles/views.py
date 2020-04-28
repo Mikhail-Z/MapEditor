@@ -3,8 +3,10 @@ from __future__ import unicode_literals
 
 import traceback
 from django.shortcuts import render
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, HttpResponseNotFound
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect, HttpResponseNotFound
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from ..shared.models import ShapeFile
+from django.shortcuts import redirect
 from .forms import ImportShapefileForm
 from django.http import Http404
 from django.contrib.gis.geos import Point
@@ -12,28 +14,40 @@ from ..shared.utils import *
 import shapeFilesIO
 from ..shared.models import *
 from django.contrib.auth.decorators import login_required
+import os
+from ..shared.decorators import *
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 
 
 @login_required
+@require_GET
 def list_shapefiles(request):
     shapefiles = ShapeFile.objects.all().filter(user_id=request.user.id).order_by("file_name")
-    return render(request, "list_shapefiles.html", {"shapefiles": shapefiles})
+    context = {
+        "shapefiles": shapefiles,
+    }
+    return render(request, "list_shapefiles.html", context)
 
 
-@login_required
+@ajax_login_required
+@require_POST
 def import_shapefile(request):
-    if request.method == "GET":
-        form = ImportShapefileForm()
-        return render(request, "import_shapefile.html", {"form": form, "errMsg": None})
-    elif request.method == "POST":
-        errMsg = None
-        form = ImportShapefileForm(request.POST, request.FILES)
-        if form.is_valid():
-            shapefile = request.FILES['import_file']
-            errMsg = shapeFilesIO.import_data(shapefile, request.user.id)
-            if errMsg is None:
-                return HttpResponseRedirect("/")
-        return render(request, "./import_shapefile.html", {"form": form, "errMsg": errMsg})
+    shapefile = request.FILES['file']
+    err_msg = shapeFilesIO.import_data(shapefile, request.user.id)
+    if err_msg is None:
+        data = {
+            "ok": True,
+            "errors": None
+        }
+    else:
+        data = {
+            "ok": False,
+            "errors": [
+                err_msg
+            ]
+        }
+    return JsonResponse(data)
 
 
 @login_required
@@ -170,15 +184,17 @@ def delete_feature(request, shapefile_id, feature_id):
 
 
 @login_required
+@require_POST
 def delete_shapefile(request, shapefile_id):
+    data = {
+
+    }
     try:
         shapefile = ShapeFile.objects.get(id=shapefile_id)
+        shapefile.delete()
+        data["ok"] = True
+        data["errors"] = []
     except ShapeFile.DoesNotExist:
-        return HttpResponseNotFound()
-
-    if request.method == "GET":
-        return render(request, "delete_shapefile.html", {"shapefile": shapefile})
-    elif request.method == "POST":
-        if request.POST["confirm"] == "1":
-            shapefile.delete()
-        return HttpResponseRedirect("/")
+        data["ok"] = True
+        data["errors"] = ["Данного файла фигур не существует"]
+    return JsonResponse(data)

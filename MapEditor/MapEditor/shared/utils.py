@@ -23,7 +23,7 @@ def calc_geometry_field(geometry_type):
     if geometry_type == "Polygon":
         return "geom_multipolygon"
     elif geometry_type == "LineString":
-        return "geom_multilinestring"
+        return "geom_multiline_string"
     elif geometry_type == "Point":
         return "geom_multipoint"
     else:

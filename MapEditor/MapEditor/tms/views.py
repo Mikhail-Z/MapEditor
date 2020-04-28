@@ -140,13 +140,15 @@ def tile(request, version, shapefile_id, zoom, x, y):
             query = '(select ' + geometry_field + \
                     ' from "shared_feature" where shapefile_id = ' + str(shapefile_id) + ') as geom'.encode("utf-8")
 
-            if shapefile.geom_type in ["Point", "MultiPoint"]:
+            if shapefile.geom_type in [u"Point", u"MultiPoint"]:
                 symbolizer = "<PointSymbolizer>"
-            elif shapefile in ["LineString", "MultiLineString"]:
-                symbolizer = '<LineSymbolizer strike="#000000" stroke=width="0.5"/>'
-            elif shapefile.geom_type in ["Polygon", "MultiPolygon"]:
+            elif shapefile.geom_type in [u"LineString", u"MultiLineString"]:
+                symbolizer = '<LineSymbolizer strike="#000000" stroke-width="0.5"/>'
+            elif shapefile.geom_type in [u"Polygon", u"MultiPolygon"]:
                 symbolizer = '<PolygonSymbolizer fill="#f7edee"/>' +\
                     '<LineSymbolizer stroke="#000000" stroke-width="0.5"/>'
+            else:
+                print shapefile.geom_type
             map_string = '''<?xml version="1.0" encoding="utf-8"?>
             <Map background-color="#7391ad" srs="+proj=longlat +datum=WGS84">
                 <!--<FontSet name="bold-fonts">

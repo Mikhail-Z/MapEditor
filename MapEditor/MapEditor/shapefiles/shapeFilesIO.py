@@ -81,6 +81,7 @@ def import_data(shapefile, user_id):
     src_spatial_ref = layer.GetSpatialRef()
     geom_type = layer.GetLayerDefn().GetGeomType()
     geom_name = ogr.GeometryTypeToName(geom_type)
+    geom_name = geom_name.replace(" ", "")
     shapefile = ShapeFile(file_name=shapefile_name,
                           src_wkt=src_spatial_ref.ExportToWkt(),
                           geom_type=geom_name,

@@ -1,0 +1,21 @@
+.login-jumbotron {
+  border:10px solid #003366;
+  width: 480px;
+  margin: 0 auto
+}
+
+.login-container {
+  padding-top: 120px;
+}
+
+.header {
+  padding: 20px;
+}
+
+.error-msg {
+  text-color: red
+}
+
+#id_username {
+
+}

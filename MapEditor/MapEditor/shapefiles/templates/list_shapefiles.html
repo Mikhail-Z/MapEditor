@@ -1,37 +1,156 @@
-<html>
-  <head>
-    <title>MapEditor</title>
-  </head>
-  <body>
-    <h1>MapEditor</h1>
-{% if shapefiles %}
-    <b>Available Shapefiles:</b>
-    <table border="0" cellspacing="0" cellpadding="5"
-           style="padding-left:20px">
-  {% for shapefile in shapefiles %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block 'css' %}
+<link rel="stylesheet" href="{% static 'css/list_shapefiles.css' %}">
+{% endblock %}
+
+{% block 'content' %}
+<div class="text-center">
+  <div class="div jumbotron import-shapefile-jumbotron">
+    <div class="input-group">
+      <div class="custom-file">
+        <input type="file" class="custom-file-input" id="import-shapefile-input"
+          aria-describedby="inputGroupFileAddon01" accept="application/zip">
+        <label class="custom-file-label" for="import-shapefile-input">Выберите zip-архив с файлами фигур (расширения .shp, .shx, .dbf, .prj)</label>
+      </div>
+      <button class="btn btn-primary" id="import-shapefile-btn">Загрузить</button>
+    </div>
+  </div>
+  <div>
+
+  </div>
+  {% if shapefiles %}
+  <table class="table table-striped">
+    <thead>
       <tr>
-        <td><font style="font-family:monospace">
-          {{ shapefile.file_name }}
-        </font></td>
-        <td>&nbsp;</td>
+        <th scope="col">#</th>
+        <th scope="col">Название файла</th>
+        <th scope="col">Дата создания</th>
+        <th scope="col">Дата последнего изменения</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for shapefile in shapefiles %}
+      <tr id="{{ shapefile.id }}">
+        <th scope="row">{{ forloop.counter }}</th>
+        <td>{{shapefile.file_name}}</td>
+        <td>{{shapefile.created}}</td>
+        <td>{{shapefile.modified}}</td>
+        <!--<td>
+          <button class="btn btn-secondary btn-primary" role="button" aria-disabled="true" id="export-shapefile">Экспортировать</button>
+        </td>-->
         <td>
-          <a href="/edit/{{ shapefile.id }}">Edit</a>
+          <a href="{% url 'export_shapefile' shapefile_id=shapefile.id %}" class="btn btn-secondary" role="button" aria-disabled="true">Экспортировать</a>
         </td>
-        <td>&nbsp;</td>
         <td>
-          <a href="/export/{{ shapefile.id }}">Export</a>
+          <a href="{% url 'edit_shapefile' shapefile_id=shapefile.id %}" class="btn btn-secondary" role="button" aria-disabled="true">Редактировать</a>
         </td>
-        <td>&nbsp;</td>
         <td>
-          <a href="/delete/{{ shapefile.id }}">Delete</a>
+          <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModalCenter" id="delete-shapefile">
+            Удалить
+          </button>
         </td>
       </tr>
-  {% endfor %}
-    </table>
-{% endif %}
-    <button type="button"
-            onClick='window.location="/import";'>
-      Импорт файла фигур
-    </button>
-  </body>
-</html>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <div class="empty-shapefile-list">
+      <h2>Ни один файл фигур не был загружен</h2>
+    </div>
+  {% endif %}
+</div>
+
+<div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLongTitle">Предупреждение</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        Точно хотите удалить файл фигур?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Нет</button>
+        <button type="button" class="btn btn-primary" id="submit-delete-shapefile-btn">Да</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block 'js' %}
+<script>
+  var selectedShapefileId = null
+  $(document).on("click", "#delete-shapefile", function(e) {
+    selectedShapefileId = $(this).closest('tr').attr("id");
+    alert(selectedShapefileId)
+  });
+
+  /*$(document).on("click", "#export-shapefile", function(e) {
+    selectedShapefileId = $(this).closest('tr').attr("id");
+    $(document).ready(function() {
+    $.ajax({
+      url: `http://localhost:8000/shapefiles/export/${selectedShapefileId}`,
+      type: 'POST',
+      success: function (data) {
+          alert(data)
+          location.reload(true)
+      },
+      failure: function(data) {
+          alert(data.errors)
+      }
+    });
+  });*/
+
+  $("#import-shapefile-input").change(function(e){
+        var fileName = e.target.files[0].name;
+        $(".custom-file-label").html(fileName);
+    });
+
+  $(document).ready(function() {
+    $("#exampleModalCenter").on("click", "#submit-delete-shapefile-btn", function(e) {
+      $.ajax({
+        url: `http://localhost:8000/shapefiles/delete/${selectedShapefileId}`,
+        type: 'POST',
+        success: function (data) {
+            alert(data)
+            location.reload(true)
+        },
+        failure: function(data) {
+            alert(data.errors)
+        }
+      });
+    })
+  });
+
+  $("#import-shapefile-btn").click(function(e) {
+    e.preventDefault()
+    var $input = $("#import-shapefile-input");
+    var fd = new FormData;
+
+    fd.append('file', $input.prop('files')[0]);
+
+    $.ajax({
+        url: 'http://localhost:8000/shapefiles/import',
+        data: fd,
+        processData: false,
+        contentType: false,
+        type: 'POST',
+        success: function (data) {
+            alert(data)
+            location.reload(true)
+        },
+        failure: function(data) {
+            alert(data.errors)
+        }
+    });
+  })
+</script>
+<script src="{% static 'js/list_shapefiles.js' %}"></script>
+{% endblock %}

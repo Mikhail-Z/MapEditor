@@ -10,6 +10,8 @@ class ShapeFile(models.Model):
     src_wkt = models.CharField(max_length=1024)
     geom_type = models.CharField(max_length=50)
     user = models.ForeignKey(get_user_model(), null=True)
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.file_name
