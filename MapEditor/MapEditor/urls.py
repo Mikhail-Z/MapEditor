@@ -26,9 +26,11 @@ urlpatterns = [
     url(r'^export/(?P<shapefile_id>\d+)', export_shapefile, name="export_shapefile"),
     url(r'^tms/', include("MapEditor.tms.urls")),
     url(r'^edit/(?P<shapefile_id>\d+$)', edit_shapefile, name="edit_shapefile"),
-    url(r'^find_feature$', find_feature, "find_feature"),
+    url(r'^find_feature$', find_feature, name="find_feature"),
+    url(r'^show_feature_info/(?P<shapefile_id>\d+)$', show_feature_info, name="show_feature_info"),
     url(r'^edit_feature/(?P<shapefile_id>\d+)/(?P<feature_id>\d+)$', edit_feature, name="edit_feature"),
     url(r'^edit_feature/(?P<shapefile_id>\d+)$', edit_feature), # TODO
     url(r'^delete_feature/(?P<shapefile_id>\d+)/(?P<feature_id>\d+)$', delete_feature, name="delete_feature"),
     url(r'^shapefiles/delete/(?P<shapefile_id>\d+)$', delete_shapefile, name="delete_shapefile"),
+    url(r'^shapefiles/create$', create_shapefile, name="create_shapefile"),
 ]

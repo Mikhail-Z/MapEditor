@@ -31,7 +31,8 @@ class Attribute(models.Model):
 class Feature(models.Model):
     shapefile = models.ForeignKey(ShapeFile)
     geom_point = models.PointField(srid=4326, blank=True, null=True)
-    geom_multiline_string = models.MultiLineStringField(srid=4326, blank=True, null=True)
+    geom_multipoint = models.MultiPointField(srid=4326, blank=True, null=True)
+    geom_multilinestring = models.MultiLineStringField(srid=4326, blank=True, null=True)
     geom_multipolygon = models.MultiPolygonField(srid=4326, blank=True, null=True)
     geom_geometrycollection = models.GeometryCollectionField(srid=4326, blank=True, null=True)
     objects = models.GeoManager()

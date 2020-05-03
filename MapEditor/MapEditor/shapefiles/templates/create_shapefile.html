@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block 'css' %}
+<link rel="stylesheet" href="../static/ol.css" />
+<link rel="stylesheet" href="{% static 'css/create_shapefile.css' %}" />
+{% endblock %}
+
+{% block 'content' %}
+<div class="container text-center">
+  <h3>Создание файла фигур</h3>
+  <div class="row">
+    <div class="col-md-8">
+      <div id="map" class="map"></div>
+      <form id="main-form">
+        <div class="form-group">
+          <label>Тип геометрии</label>
+          <select class="form-control" id="geometry-type-select">
+            <option value="Point">Point</option>
+            <option value="LineString">LineString</option>
+            <option value="Polygon">Polygon</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+      </form>
+    </div>
+    <div class="col-md-4">
+      <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Признак</th>
+                <th>Значение</th>
+            </tr>
+        </thead>
+        <tbody id="properties-tbody">
+          <tr>
+              <td><input></td>
+              <td><input></td>
+          </tr>
+        </tbody>
+      </table>
+      <button class="btn btn-primary" id="add-property-btn">Добавить</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block 'js' %}
+  <script src="../static/ol.js"></script>
+  <script>
+    var osm = new ol.source.OSM();
+    var rasterLayer = new ol.layer.Tile({
+      source: osm
+    });
+
+    vectorLayer = new ol.layer.Vector({
+      source: new ol.source.Vector()
+    });
+    var vecSource = vectorLayer.getSource();
+    vecSource.clear();
+
+    var map = new ol.Map({
+      layers: [rasterLayer, vectorLayer],
+      target: "map",
+      view: new ol.View({
+        center: [0, 0],
+        projection: "EPSG:4326",
+        zoom: 4
+      })
+    });
+
+    var typeSelect = document.getElementById("geometry-type-select");
+
+    var draw; // global so we can remove it later
+    function addInteraction() {
+      let features = vectorLayer.getSource().getFeatures();
+      for (i = 0; i < features.length; i++) {
+        if (i == 0) {
+          alert("Текущие геометрии будут удалены")
+        }
+        vecSource.removeFeature(features[i]);
+      }
+      var value = typeSelect.value;
+      if (value !== "None") {
+        draw = new ol.interaction.Draw({
+          source: vecSource,
+          type: typeSelect.value
+        });
+        map.addInteraction(draw);
+      }
+    }
+
+    /**
+     * Handle change event.
+     */
+    typeSelect.onchange = function() {
+      map.removeInteraction(draw);
+      addInteraction();
+    };
+
+    addInteraction();
+
+    document.forms[0].addEventListener("submit", function(event) {
+      event.preventDefault();
+      var format = new ol.format.GeoJSON();
+      var features = vectorLayer.getSource().getFeatures();
+      if (features.length > 0) {
+        for (i = 0; i < features.length; i++) {
+          features[i].setProperties({"id": i});
+        }
+
+        var geoJson = format.writeFeatures(features);
+        //document.getElementById("geojson-area").value = geoJson;
+        //var selectedGeometryType = $("#geometry-type-select option:selected").text();
+        $.ajax({
+          url: `http://localhost:8000/shapefiles/create`,
+          type: 'POST',
+          data: geoJson,
+          success: function (data) {
+              if (data.ok == true) {
+                alert("Файл фигур успешно добавлен")
+                window.location.href = "/"
+              } else {
+                alert(data.errors)
+              }
+          },
+          failure: function(data) {
+              alert(data.errors)
+          }
+        })
+      } else {
+        alert("Файл фигур не может быть пустым!")
+      }
+    })
+  </script>
+  <script>
+     $(document).on("click", "#add-property-btn", function(e) {
+        $("#properties-tbody").append(`<tr>
+              <td><input></td>
+              <td><input></td>
+          </tr>`)
+      });
+  </script>
+{% endblock %}

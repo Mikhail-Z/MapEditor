@@ -5,9 +5,7 @@ import traceback
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect, HttpResponseNotFound
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
-from ..shared.models import ShapeFile
-from django.shortcuts import redirect
-from .forms import ImportShapefileForm
+import datetime
 from django.http import Http404
 from django.contrib.gis.geos import Point
 from ..shared.utils import *
@@ -15,6 +13,8 @@ import shapeFilesIO
 from ..shared.models import *
 from django.contrib.auth.decorators import login_required
 import os
+import tempfile
+import uuid
 from ..shared.decorators import *
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
@@ -23,7 +23,7 @@ TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 @login_required
 @require_GET
 def list_shapefiles(request):
-    shapefiles = ShapeFile.objects.all().filter(user_id=request.user.id).order_by("file_name")
+    shapefiles = ShapeFile.objects.all().filter(user_id=request.user.id).order_by("-modified")
     context = {
         "shapefiles": shapefiles,
     }
@@ -34,7 +34,14 @@ def list_shapefiles(request):
 @require_POST
 def import_shapefile(request):
     shapefile = request.FILES['file']
-    err_msg = shapeFilesIO.import_data(shapefile, request.user.id)
+    fd, fname = tempfile.mkstemp(suffix="zip")
+    os.close(fd)
+
+    f = open(fname, "wb")
+    for chunk in shapefile.chunks():
+        f.write(chunk)
+    f.close()
+    err_msg = shapeFilesIO.import_data(fname, request.user.id)
     if err_msg is None:
         data = {
             "ok": True,
@@ -70,7 +77,7 @@ def edit_shapefile(request, shapefile_id):
     tms_url = "http://" + request.get_host() + "/tms"
     find_feature_url = "http://" + request.get_host() + "/editor/find_feature" + str(shapefile_id)
     add_feature_url = "http://" + request.get_host() + "/edit_feature/" + str(shapefile_id)
-    return render(request, "select_feature.html", {
+    return render(request, "edit_shapefile.html", {
         "shapefile": shapefile,
         "tms_url": tms_url,
         "find_feature_url": find_feature_url,
@@ -79,39 +86,57 @@ def edit_shapefile(request, shapefile_id):
 
 
 @login_required
+@require_GET
+def show_feature_info(request, shapefile_id):
+    try:
+        #shapefile_id = int(request.GET["shapefile_id"])
+        latitude = float(request.GET["latitude"])
+        longitude = float(request.GET["longitude"])
+        feature = get_feature(shapefile_id, latitude, longitude)
+        print(feature)
+    except:
+        traceback.print_exc()
+        return HttpResponse("")
+
+
+def get_feature(shapefile_id, latitude, longitude):
+    shapefile = ShapeFile.objects.get(id=shapefile_id)
+    pt = Point(longitude, latitude)
+    radius = calc_search_radius(latitude, longitude, 1000)
+
+    if shapefile.geom_type == "Point":
+        query = Feature.objects.filter(geom_point__dwithin=(pt, radius), shapefile__id__exact=shapefile_id)
+    elif shapefile.geom_type in ['LineString', 'MultiLineString']:
+        query = Feature.objects.filter(geom_multilinestring__dwithin=(pt, radius), shapefile__id__exact=shapefile_id)
+    elif shapefile.geom_type in ['Polygon', 'Multipolygon']:
+        query = Feature.objects.filter(geom_multipolygon__dwithin=(pt, radius), shapefile__id__exact=shapefile_id)
+    elif shapefile.geom_type == 'MultiPoint':
+        query = Feature.objects.filter(geom_multipoint__dwithin=(pt, radius), shapefile__id__exact=shapefile_id)
+    elif shapefile.geom_type == 'GeometryCollection':
+        query = Feature.objects.filter(geom_geometrycollecion__dwithin=(pt, radius), shapefile__id__exact=shapefile_id)
+    else:
+        print("Неподдерживаемая геометрия: ", shapefile.geom_type)
+        return HttpResponse("")
+
+    if query.count() < 1:
+        return HttpResponse("")
+
+    feature = query[0]
+    return feature
+
+
+@login_required
+@require_GET
 def find_feature(request):
     try:
         shapefile_id = int(request.GET["shapefile_id"])
         latitude = float(request.GET["latitude"])
         longitude = float(request.GET["longitude"])
-        shapefile = ShapeFile.objects.get(id=shapefile_id)
-        pt = Point(longitude, latitude)
-        radius = calc_search_radius(latitude, longitude, 1000)
-
-        if shapefile.geom_type == "Point":
-            query = Feature.objects.filter(geom_point__dwithin=(pt, radius))
-        elif shapefile.geom_type in ['LineString', 'MultiLineString']:
-            query = Feature.objects.filter(geom_multilinestring__dwithin=(pt, radius))
-        elif shapefile.geom_type in ['Polygon', 'Multipolygon']:
-            query = Feature.objects.filter(geom_multipolygon__dwithin=(pt, radius))
-        elif shapefile.geom_type == 'MultiPoint':
-            query = Feature.objects.filter(geom_multipoint__dwithin=(pt, radius))
-        elif shapefile.geom_type == 'GeometryCollection':
-            query = Feature.objects.filter(geom_geometrycollecion__dwithin=(pt, radius))
-        else:
-            print("Неподдерживаемая геометрия: ", shapefile.geom_type)
-            return HttpResponse("")
-
-        if query.count() != 1:
-            return HttpResponse("")
-
-        feature = query[0]
+        feature = get_feature(shapefile_id, latitude, longitude)
         return HttpResponse("/edit_feature" + "/" + str(shapefile_id) + "/" + str(feature.id))
     except:
         traceback.print_exc()
         return HttpResponse("")
-
-    return HttpResponse("")
 
 
 @login_required
@@ -154,6 +179,7 @@ def edit_feature(request, shapefile_id, feature_id=None):
             if form.is_valid():
                 wkt = form.cleaned_data["geometry"]
                 setattr(feature, geometry_field, wkt)
+                ShapeFile.objects.filter(id=shapefile_id).update(modified=datetime.datetime.now())
                 feature.save()
                 return HttpResponseRedirect("/edit/" + shapefile_id)
         except ValueError:
@@ -165,6 +191,38 @@ def edit_feature(request, shapefile_id, feature_id=None):
                       "form": form,
                       "attributes": attributes
                   })
+
+@login_required
+def create_shapefile(request):
+    if request.method == "GET":
+        return render(request, "create_shapefile.html", context={})
+    else:
+        geojson_text = request.body
+        tmp_geojson_file = tempfile.NamedTemporaryFile(mode='w+t')
+        tmp_geojson_file.writelines(geojson_text)
+        tmp_geojson_file.seek(0)
+        zipfile = shapeFilesIO.convert2zip_with_shapefile(tmp_geojson_file.name, str(uuid.uuid4()))
+        tmp_geojson_file.close()
+        try:
+            err_msg = shapeFilesIO.import_data(zipfile, request.user.id)
+        except Exception as e:
+            err_msg = e.message
+        finally:
+            if os.path.exists(zipfile):
+                os.remove(zipfile)
+        if err_msg is None:
+            data = {
+                "ok": True,
+                "errors": None
+            }
+        else:
+            data = {
+                "ok": False,
+                "errors": [
+                    err_msg
+                ]
+            }
+        return JsonResponse(data)
 
 
 @login_required

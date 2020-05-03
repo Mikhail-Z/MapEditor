@@ -119,7 +119,9 @@ def tile(request, version, shapefile_id, zoom, x, y):
         tile_info.z = zoom
         tile_info.x = x
         tile_info.y = y
-        imageData = tile_cache.get(tile_info)
+        #TODO
+        #imageData = tile_cache.get(tile_info)
+        imageData = None
         if imageData is None:
 
             xEntent = _unitsPerPixel(zoom) * TILE_WIDTH
@@ -141,7 +143,7 @@ def tile(request, version, shapefile_id, zoom, x, y):
                     ' from "shared_feature" where shapefile_id = ' + str(shapefile_id) + ') as geom'.encode("utf-8")
 
             if shapefile.geom_type in [u"Point", u"MultiPoint"]:
-                symbolizer = "<PointSymbolizer>"
+                symbolizer = "<PointSymbolizer/>"
             elif shapefile.geom_type in [u"LineString", u"MultiLineString"]:
                 symbolizer = '<LineSymbolizer strike="#000000" stroke-width="0.5"/>'
             elif shapefile.geom_type in [u"Polygon", u"MultiPolygon"]:
@@ -206,7 +208,7 @@ def tile(request, version, shapefile_id, zoom, x, y):
             image = mapnik.Image(TILE_WIDTH, TILE_HEIGHT)
             mapnik.render(gmap, image)
             imageData = image.tostring('png'.encode("utf-8"))
-            tile_cache.set(tile_info, imageData)
+            #tile_cache.set(tile_info, imageData)
         return HttpResponse(imageData, content_type="image/png")
     except:
         traceback.print_exc()

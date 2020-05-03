@@ -16,6 +16,12 @@
       </div>
       <button class="btn btn-primary" id="import-shapefile-btn">Загрузить</button>
     </div>
+    <div><div>или</div></div>
+    <div>
+      <a href="{% url 'create_shapefile' %}">
+        <button class="btn btn-primary" id="create-shapefile-btn">Создать файл фигур</button>
+      </a>
+    </div>
   </div>
   <div>
 
@@ -89,29 +95,12 @@
   var selectedShapefileId = null
   $(document).on("click", "#delete-shapefile", function(e) {
     selectedShapefileId = $(this).closest('tr').attr("id");
-    alert(selectedShapefileId)
   });
 
-  /*$(document).on("click", "#export-shapefile", function(e) {
-    selectedShapefileId = $(this).closest('tr').attr("id");
-    $(document).ready(function() {
-    $.ajax({
-      url: `http://localhost:8000/shapefiles/export/${selectedShapefileId}`,
-      type: 'POST',
-      success: function (data) {
-          alert(data)
-          location.reload(true)
-      },
-      failure: function(data) {
-          alert(data.errors)
-      }
-    });
-  });*/
-
   $("#import-shapefile-input").change(function(e){
-        var fileName = e.target.files[0].name;
-        $(".custom-file-label").html(fileName);
-    });
+    var fileName = e.target.files[0].name;
+    $(".custom-file-label").html(fileName);
+   });
 
   $(document).ready(function() {
     $("#exampleModalCenter").on("click", "#submit-delete-shapefile-btn", function(e) {
@@ -119,7 +108,6 @@
         url: `http://localhost:8000/shapefiles/delete/${selectedShapefileId}`,
         type: 'POST',
         success: function (data) {
-            alert(data)
             location.reload(true)
         },
         failure: function(data) {
@@ -143,7 +131,6 @@
         contentType: false,
         type: 'POST',
         success: function (data) {
-            alert(data)
             location.reload(true)
         },
         failure: function(data) {

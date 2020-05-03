@@ -10,15 +10,17 @@ import zipfile
 from django.contrib.gis.geos.geometry import GEOSGeometry
 from django.http import FileResponse
 from osgeo import osr
+import shutil
 
 from ..shared.models import *
 from ..shared.utils import *
+from geojson import GeoJ
 
-
-def import_data(shapefile, user_id):
+#def import_data(shapefile, user_id):
+def import_data(fname, user_id):
 
     # Extract the uploaded shapefile.
-
+    """
     fd,fname = tempfile.mkstemp(suffix="zip")
     os.close(fd)
 
@@ -26,10 +28,10 @@ def import_data(shapefile, user_id):
     for chunk in shapefile.chunks():
         f.write(chunk)
     f.close()
-
+    """
     if not zipfile.is_zipfile(fname):
         os.remove(fname)
-        return "Not a valid zip archive."
+        return "Невалидный zip архив."
 
     zip = zipfile.ZipFile(fname)
 
@@ -47,7 +49,7 @@ def import_data(shapefile, user_id):
         if not has_suffix[suffix]:
             zip.close()
             os.remove(fname)
-            return "Archive missing required " + suffix + " file."
+            return "Файл в архиве имеет невалидное расширение " + suffix
 
     shapefile_name = None
     dir_name = tempfile.mkdtemp()
@@ -61,8 +63,6 @@ def import_data(shapefile, user_id):
         f.close()
     zip.close()
 
-    # Open the shapefile.
-
     try:
         datasource = ogr.Open(os.path.join(dir_name, shapefile_name))
         layer      = datasource.GetLayer(0)
@@ -74,9 +74,7 @@ def import_data(shapefile, user_id):
     if not shapefile_ok:
         os.remove(fname)
         shutil.rmtree(dir_name)
-        return "Not a valid shapefile."
-
-    # Save Shapefile object to database.
+        return "Невалидный shapefile."
 
     src_spatial_ref = layer.GetSpatialRef()
     geom_type = layer.GetLayerDefn().GetGeomType()
@@ -88,10 +86,9 @@ def import_data(shapefile, user_id):
                           user_id=user_id)
     shapefile.save()
 
-    # Define the shapefile's attributes.
-
     attributes = []
     layer_def = layer.GetLayerDefn()
+    n = layer_def.GetFieldCount()
     for i in range(layer_def.GetFieldCount()):
         field_def = layer_def.GetFieldDefn(i)
         attr = Attribute(shape_file=shapefile,
@@ -102,8 +99,6 @@ def import_data(shapefile, user_id):
         attr.save()
         attributes.append(attr)
 
-    # Save the Shapefile's features and attributes to disk.
-
     dst_spatial_ref = osr.SpatialReference()
     dst_spatial_ref.ImportFromEPSG(4326)
 
@@ -111,6 +106,7 @@ def import_data(shapefile, user_id):
                                       src_spatial_ref,
                                       dst_spatial_ref)
 
+    n = layer.GetFeatureCount()
     for i in range(layer.GetFeatureCount()):
         src_feature = layer.GetFeature(i)
         src_geometry = src_feature.GetGeometryRef()
@@ -164,8 +160,6 @@ def export_data(shapefile):
     layer = datasource.CreateLayer(layer_name,
                                    dst_spatial_ref)
 
-    # Define the shapefile's attributes.
-
     for attr in shapefile.attribute_set.all():
         print("attribute: ", attr)
         attribute_name = attr.name.encode("utf-8")
@@ -183,11 +177,7 @@ def export_data(shapefile):
     coord_transform = osr.CoordinateTransformation(
                           src_spatial_ref, dst_spatial_ref)
 
-    # Calculate which geometry field holds the shapefile's geometry.
-
     geom_field = calc_geometry_field(shapefile.geom_type)
-
-    # Export the shapefile's features.
 
     for feature in shapefile.feature_set.all():
         geometry = getattr(feature, geom_field)
@@ -209,8 +199,6 @@ def export_data(shapefile):
 
     layer      = None
     datasource = None
-
-    # Compress the shapefile as a ZIP archive.
 
     temp = tempfile.TemporaryFile()
     zip = zipfile.ZipFile(temp, 'w', zipfile.ZIP_DEFLATED)
@@ -234,3 +222,25 @@ def export_data(shapefile):
         "attachment; filename=" + shapefile_name + ".zip"
     return response
 
+
+def convert2zip_with_shapefile(geojson_path, shapefile_name):
+    #geojson_path_no_ext = os.path.splitext(geojson_path)[0]
+    output_zip_path = shapefile_name + ".zip"
+    gj = GeoJ(geojson_path)
+    gj.toShp(shapefile_name)
+
+    def zipdir(path, name, ziph):
+        # ziph is zipfile handle
+        ziph.write(os.path.join(path, name + ".dbf"))
+        ziph.write(os.path.join(path, name + ".prj"))
+        ziph.write(os.path.join(path, name + ".shp"))
+        ziph.write(os.path.join(path, name + ".shx"))
+        os.remove(name + ".dbf")
+        os.remove(name + ".prj")
+        os.remove(name + ".shp")
+        os.remove(name + ".shx")
+
+    zipf = zipfile.ZipFile(output_zip_path, 'w', zipfile.ZIP_DEFLATED)
+    zipdir(".", shapefile_name, zipf)
+    zipf.close()
+    return zipf.filename

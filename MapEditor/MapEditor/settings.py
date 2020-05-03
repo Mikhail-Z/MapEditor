@@ -50,7 +50,8 @@ INSTALLED_APPS = [
     'MapEditor.shapefiles',
     'MapEditor.tms',
     'MapEditor.authentication',
-    'MapEditor.api'
+    'MapEditor.api',
+    'leaflet'
 ]
 
 MIDDLEWARE = [
@@ -132,3 +133,10 @@ USE_TZ = True
 
 
 CORS_ORIGIN_ALLOW_ALL = True
+
+
+LEAFLET_CONFIG = {
+    'DEFAULT_CENTER': (6.0, 45.0),
+    'DEFAULT_ZOOM': 16,
+    'TILES': 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+}
